@@ -2,6 +2,7 @@
 #coding=utf8
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
+__file__	= "pwnSQL.py"
 __version__	= "1.2"
 
 ## Imports ##
