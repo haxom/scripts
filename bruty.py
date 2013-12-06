@@ -3,18 +3,19 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "bruty.py"
-__version__	= "0.3"
+__version__	= "0.4"
 
 ## Imports ##
 from optparse import OptionParser
 from os import path
 import sys
 import curses
+from time import sleep
 from threading import Thread, active_count
 import Queue
 import httplib2
+from math import ceil
 
-## Defaults ##
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0'}
 
 ## Params ##
@@ -28,6 +29,7 @@ def getParams():
 	parser.add_option('-x', '--exclude', dest='exclude', default='404', help='exclude return code, separated by a coma')
 	parser.add_option('', '--level', dest='level', default=-1, help='subdirectories max. level (< 0 = infinite)')
 	parser.add_option('-m', '--method', dest='method', default='GET', help='HTTP method (default: GET)')
+	parser.add_option('-n', '--thread', dest='threads', default=1, help='Nbre of threads')
 	(options, args) = parser.parse_args(sys.argv)
 	return options
 
@@ -35,23 +37,43 @@ def display(x, y, text):
 	stdscr.addstr(x, y, text)
 	stdscr.refresh()
 
-def drawTree(tree):
-	display(13, 0, tree)
-	# ToDo
+def displayTree(tree, x):
+	display(x, 0, 'ToDo')
 
-def search(options, dict, queue):
+def search(options, candidates, queue, root):
 	http =  httplib2.Http()
-	positiv = list()
-	for current in dict:
-		response, content = http.request('%s/%s' % (options.url, current), options.method, headers=headers)
+	for current in candidates:
+		current = current.rstrip()
+		response, content = http.request('%s/%s/%s' % (options.url, root, current), options.method, headers=headers)
 		if str(response.status) not in options.exclude:
-			positiv.append(current)
-	queue.put(positiv)
+			queue.put((response.status, current))
+
+def getElements(options, dico, root, queue):
+	num_lines = sum(1 for line in open(dico))
+	f = open(dico)
+	pas = int(ceil(num_lines*1./options.threads))
+	for i in range(0, options.threads):
+		current_list = list()
+		beg = i*pas
+		end = (i+1)*pas
+		if i == options.threads -1:
+			end = num_lines
+		for i in range(beg, end):
+				current_list.append(f.readline())
+		t = Thread(target=search, args=(options, current_list, queue, root), kwargs=None)
+		t.setDaemon(True)
+		t.start()
+	f.close()
+	while active_count() > 2:
+		sleep(0.5)
 
 ## Main ##
 if __name__ == '__main__':
 	options = getParams()
 	options.level = int(options.level)
+	options.threads = int(options.threads)
+	if options.threads < 1:
+		options.threads = 1
 	if len(options.filenames) <= 0 or not path.exists(options.filenames):
 		options.filenames = ''
 	if len(options.directories) <= 0 or not path.exists(options.directories):
@@ -86,31 +108,33 @@ if __name__ == '__main__':
 	display(10, 0, '| Directories based on: %s' % options.directories)
 	display(11, 0, '| Level of subdirectories scanned: %d' % options.level)
 
-	display(13, 0, '| Building ...')
+	display(13, 0, '| Dictionnary attack ...')
+
 	try:
 
 		cur_lvl = 0
-		queue = Queue.Queue()
+		tree = list()
+
 		while cur_lvl <= options.level or options.level < 0:
+			
 			# files
-			f = open(options.filenames, 'r')
-			currents = list()
-			for current in f:
-				currents.append(current)
-			f.close()
-
-			t1 = Thread(target=search, args=(options, currents, queue), kwargs=None)
-			t1.setDaemon(True)
-			t1.start()
-
-			while active_count() > 2:
-				sleep(0.5)
-
-			l = len(queue.get())
-			display(14, 0, '%d found' % l)
+			queue = Queue.Queue()
+			getElements(options, options.filenames, '/', queue)
+			while queue.qsize() > 0:
+				cur = queue.get()
+				tree.append(('f%d'%cur[0], cur[1]))
 
 			# directories
+			getElements(options, options.directories, '/', queue)
+			while queue.qsize() > 0:
+				cur = queue.get()
+				tree.append(('d%d%s'%(cur[0],cur[1]), list()))
+
+
 			cur_lvl+=1
+		display(13, 0, '                        ')
+		displayTree(tree, 14)
+		print tree
 
 	except Exception as e:
 		print 'Error: %s' % e
