@@ -3,7 +3,7 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "bruty.py"
-__version__	= "0.4"
+__version__	= "0.5"
 
 ## Imports ##
 from optparse import OptionParser
@@ -15,6 +15,7 @@ from threading import Thread, active_count
 import Queue
 import httplib2
 from math import ceil
+from urllib import quote_plus
 
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0'}
 
@@ -37,16 +38,43 @@ def display(x, y, text):
 	stdscr.addstr(x, y, text)
 	stdscr.refresh()
 
-def displayTree(tree, x):
-	display(x, 0, 'ToDo')
+def displayTree(tree, x, decal=0):
+	# print tree
+	# return the next line number
+	for i in tree:
+		elem = i[0]
+		if(elem[0] == 'f'):
+			code = elem[1:4]
+			name = i[1]
+			display(x, decal, '| %s | %s'%(code, name))
+		elif elem[0] =='d':
+			code = elem[1:4]
+			name = elem[4:]
+			display(x, decal, '| %s | %s'%(code, name))
+			subtree = i[1]
+			if len(subtree) > 0:
+				x += 1
+				display(x, decal, '\\')
+				x += 1
+				x = displayTree(subtree, x, 10)
+				x -= 1
+		x += 1
+	return x
+
+def removeDouble(tree):
+	new_tree = list()
+	for i in tree:
+		if new_tree.count(i) == 0:
+			new_tree.append(i)
+	return new_tree
 
 def search(options, candidates, queue, root):
 	http =  httplib2.Http()
 	for current in candidates:
 		current = current.rstrip()
-		response, content = http.request('%s/%s/%s' % (options.url, root, current), options.method, headers=headers)
+		response, content = http.request('%s/%s/%s' % (options.url, root, quote_plus(current)), options.method, headers=headers)
 		if str(response.status) not in options.exclude:
-			queue.put((response.status, current))
+			queue.put((response.status, quote_plus(current)))
 
 def getElements(options, dico, root, queue):
 	num_lines = sum(1 for line in open(dico))
@@ -116,9 +144,9 @@ if __name__ == '__main__':
 		tree = list()
 
 		while cur_lvl <= options.level or options.level < 0:
-			
-			# files
 			queue = Queue.Queue()
+
+			# files
 			getElements(options, options.filenames, '/', queue)
 			while queue.qsize() > 0:
 				cur = queue.get()
@@ -133,8 +161,8 @@ if __name__ == '__main__':
 
 			cur_lvl+=1
 		display(13, 0, '                        ')
+		removeDouble(tree)
 		displayTree(tree, 14)
-		print tree
 
 	except Exception as e:
 		print 'Error: %s' % e
