@@ -3,11 +3,11 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "bruty.py"
-__version__	= "1.0a"
+__version__	= "1.0b"
 
 ## ToDo
 #
-# + Recursive the recursive (no limitation to 4 level (0 to 3))
+# + Recursion of the recursion (no limitation to 4 level (0 to 3))
 # + More filters
 # + Better display
 # + Dynamic output export
@@ -106,7 +106,7 @@ def getElements(options, dico, root, queue):
 	while active_count() > 2:
 		sleep(0.5)
 
-def recursivity(options, tree, root, cur_lvl=0):
+def recursion(options, tree, root, cur_lvl=0):
 	list_tmp = list()
 	for i in tree:
 		if i[0][0] == 'd':
@@ -191,7 +191,7 @@ if __name__ == '__main__':
 		cur_lvl = 1
 		while cur_lvl <= options.level or options.level < 0:
 				if cur_lvl == 1:
-					tree = recursivity(options, tree, '', 1) 
+					tree = recursion(options, tree, '', 1) 
 					displayTree(tree, 4)
 
 				if cur_lvl == 2:
@@ -199,7 +199,7 @@ if __name__ == '__main__':
 						if i[0][0] == 'd':
 							index = tree.index(i)
 							root = '/%s'%i[0][4:]
-							new_list = recursivity(options, i[1], root, 2)
+							new_list = recursion(options, i[1], root, 2)
 							tree[index] = (i[0], new_list)
 							displayTree(tree, 4)
 
@@ -212,7 +212,7 @@ if __name__ == '__main__':
 								if v[0][0] == 'd':
 									index2 = i[1].index(v)
 									root  = '%s/%s' % (root, v[0][4:])
-									new_list = recursivity(options, v[1], root, 3)
+									new_list = recursion(options, v[1], root, 3)
 									i[1][index2] = (v[0], new_list)
 							tree[index] = (i[0], i[1])
 							displayTree(tree, 4)
