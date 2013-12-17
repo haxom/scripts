@@ -1,4 +1,21 @@
 ================================================================================
+bruty
+=====
+
+HTTP brute-forcer with folder recursion.
+
+$ python bruty.py -u http://localhost --files raft-small-files-lowercase.txt --directories raft-small-directories-lowercase.txt --level 1 -n 5 -x 403,404,500
+[[ Bruty.py v1.0a ]]
+| Target: http://localhost
+| Level : 1/1 |  Current folder : /subfolder_lvl0/ (1/1)
+
+| 200 | .
+| 200 | subfolder_lvl0
+	| 200 | .
+	| 200 | subfolder_lvl1
+
+
+================================================================================
 pwnSQL
 ======
 
