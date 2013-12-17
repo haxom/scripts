@@ -35,6 +35,8 @@ def getParams():
 	return options
 
 def display(x, y, text):
+	# clear lien before
+	stdscr.addstr(x, 0, '                                                      ')
 	stdscr.addstr(x, y, text)
 	stdscr.refresh()
 
@@ -54,8 +56,6 @@ def displayTree(tree, x, decal=0):
 			subtree = i[1]
 			if len(subtree) > 0:
 				x += 1
-				display(x, decal, '\\')
-				x += 1
 				x = displayTree(subtree, x, 10)
 				x -= 1
 		x += 1
@@ -72,9 +72,11 @@ def search(options, candidates, queue, root):
 	http =  httplib2.Http()
 	for current in candidates:
 		current = current.rstrip()
-		response, content = http.request('%s/%s/%s' % (options.url, root, quote_plus(current)), options.method, headers=headers)
+		if len(current) == 0:
+			continue
+		response, content = http.request('%s%s%s' % (options.url, root, quote_plus(current)), options.method, headers=headers)
 		if str(response.status) not in options.exclude:
-			queue.put((response.status, quote_plus(current)))
+			queue.put((response.status, current))
 
 def getElements(options, dico, root, queue):
 	num_lines = sum(1 for line in open(dico))
@@ -123,46 +125,62 @@ if __name__ == '__main__':
 	stdscr = curses.initscr()
 	curses.noecho()
 
-	display(0, 0, '__________                __          ')
-	display(1, 0, '\______   \_______ __ ___/  |_ ___.__.')
-	display(2, 0, ' |    |  _/\_  __ \  |  \   __<   |  |')
-	display(3, 0, ' |    |   \ |  | \/  |  /|  |  \___  |')
-	display(4, 0, ' |______  / |__|  |____/ |__|  / ____|')
-	display(5, 0, '        \/                     \/     ')
-	display(6, 0, '                                  v%s'%__version__)
+	display(0, 0, '[[ Bruty.py v%s ]]'%__version__)
+	display(1, 0, '| Target: %s' % options.url)
 
-	display(8, 0, '| Target: %s' % options.url)
-	display(9, 0, '| Filenames based on: %s' % options.filenames)
-	display(10, 0, '| Directories based on: %s' % options.directories)
-	display(11, 0, '| Level of subdirectories scanned: %d' % options.level)
-
-	display(13, 0, '| Dictionnary attack ...')
+	display(2, 0, '| Level : %d/%d | Current folder : / '%(0, options.level))
 
 	try:
-
-		cur_lvl = 0
+		# final tree
 		tree = list()
+		# root research
+		queue = Queue.Queue()
 
+		# files
+		getElements(options, options.filenames, '/', queue)
+		while queue.qsize() > 0:
+			cur = queue.get()
+			tree.append(('f%d'%cur[0], cur[1]))
+		# directories
+		getElements(options, options.directories, '/', queue)
+		while queue.qsize() > 0:
+			cur = queue.get()
+			tree.append(('d%d%s'%(cur[0],cur[1]), list()))
+
+		display(2, 0, '                                                                          ')
+		tree = removeDouble(tree)
+		displayTree(tree, 4)
+
+		cur_lvl = 1
 		while cur_lvl <= options.level or options.level < 0:
-			queue = Queue.Queue()
+				list_tmp = list()
+				for i in tree:
+					if i[0][0] == 'd':
+						list_tmp.append(i)
+				
+				for i in list_tmp:
+					try:
+						display(2, 0, '| Level : %d/%d |  Current folder : %s (%d/%d)' % (cur_lvl, options.level, i[0][4:], list_tmp.index(i)+1, len(list_tmp)))
 
-			# files
-			getElements(options, options.filenames, '/', queue)
-			while queue.qsize() > 0:
-				cur = queue.get()
-				tree.append(('f%d'%cur[0], cur[1]))
+						n_tree = list()
+						# files
+						getElements(options, options.filenames, '/%s/'%i[0][4:], queue)
+						while queue.qsize() > 0:
+							cur = queue.get()
+							n_tree.append(('f%d'%cur[0], cur[1]))
+						# directories
+						getElements(options, options.directories, '/%s/'%i[0][4:], queue)
+						while queue.qsize() > 0:
+							cur = queue.get()
+							n_tree.append(('d%d%s'%(cur[0],cur[1]), list()))
 
-			# directories
-			getElements(options, options.directories, '/', queue)
-			while queue.qsize() > 0:
-				cur = queue.get()
-				tree.append(('d%d%s'%(cur[0],cur[1]), list()))
-
-
-			cur_lvl+=1
-		display(13, 0, '                        ')
-		removeDouble(tree)
-		displayTree(tree, 14)
-
+						display(2, 0, '                                                                          ')
+						n_tree = removeDouble(n_tree)
+						tree[tree.index(i)] = (i[0], n_tree)
+						displayTree(tree, 4)
+					except curses.error:
+						# sometimes... but anyway (maybe out of screen)
+						continue
+				cur_lvl+=1
 	except Exception as e:
 		print 'Error: %s' % e
