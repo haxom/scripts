@@ -3,7 +3,16 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "bruty.py"
-__version__	= "0.5"
+__version__	= "1.0a"
+
+## ToDo
+#
+# + Recursive the recursive (no limitation to 4 level (0 to 3))
+# + More filters
+# + Better display
+# + Dynamic output export
+#
+## End of ToDo
 
 ## Imports ##
 from optparse import OptionParser
@@ -28,7 +37,7 @@ def getParams():
 	parser.add_option('-H', '--headers', dest='headers', default='', help='custom the headers (name:value;name:value...)')
 	parser.add_option('-l', '--log', dest='log', default=False, action='store_true', help='log the requests/responses')
 	parser.add_option('-x', '--exclude', dest='exclude', default='404', help='exclude return code, separated by a coma')
-	parser.add_option('', '--level', dest='level', default=-1, help='subdirectories max. level (< 0 = infinite)')
+	parser.add_option('', '--level', dest='level', default=-1, help='subdirectories max. level (0 to 3)')
 	parser.add_option('-m', '--method', dest='method', default='GET', help='HTTP method (default: GET)')
 	parser.add_option('-n', '--thread', dest='threads', default=1, help='Nbre of threads')
 	(options, args) = parser.parse_args(sys.argv)
@@ -56,7 +65,7 @@ def displayTree(tree, x, decal=0):
 			subtree = i[1]
 			if len(subtree) > 0:
 				x += 1
-				x = displayTree(subtree, x, 10)
+				x = displayTree(subtree, x, 10+decal)
 				x -= 1
 		x += 1
 	return x
@@ -97,6 +106,34 @@ def getElements(options, dico, root, queue):
 	while active_count() > 2:
 		sleep(0.5)
 
+def recursivity(options, tree, root, cur_lvl=0):
+	list_tmp = list()
+	for i in tree:
+		if i[0][0] == 'd':
+			list_tmp.append(i)
+	for i in list_tmp:
+		try:
+			display(2, 0, '| Level : %d/%d |  Current folder : %s/%s/ (%d/%d)' % (cur_lvl, options.level, root, i[0][4:], list_tmp.index(i)+1, len(list_tmp)))
+			n_tree = list()
+			# files
+			getElements(options, options.filenames, '%s/%s/'%(root, i[0][4:]), queue)
+			while queue.qsize() > 0:
+				cur = queue.get()
+				n_tree.append(('f%d'%cur[0], cur[1]))
+			# directories
+			getElements(options, options.directories, '%s/%s/'%(root, i[0][4:]), queue)
+			while queue.qsize() > 0:
+				cur = queue.get()
+				n_tree.append(('d%d%s'%(cur[0],cur[1]), list()))
+			display(2, 0, '                                                                          ')
+			n_tree = removeDouble(n_tree)
+			tree[tree.index(i)] = (i[0], n_tree)
+			displayTree(tree, 4)
+		except curses.error:
+			# sometimes... but anyway (maybe when trying to print out of screen)
+			continue
+	return tree
+
 ## Main ##
 if __name__ == '__main__':
 	options = getParams()
@@ -131,11 +168,10 @@ if __name__ == '__main__':
 	display(2, 0, '| Level : %d/%d | Current folder : / '%(0, options.level))
 
 	try:
-		# final tree
 		tree = list()
-		# root research
 		queue = Queue.Queue()
 
+		## root research
 		# files
 		getElements(options, options.filenames, '/', queue)
 		while queue.qsize() > 0:
@@ -151,36 +187,35 @@ if __name__ == '__main__':
 		tree = removeDouble(tree)
 		displayTree(tree, 4)
 
+		## recursive research
 		cur_lvl = 1
 		while cur_lvl <= options.level or options.level < 0:
-				list_tmp = list()
-				for i in tree:
-					if i[0][0] == 'd':
-						list_tmp.append(i)
-				
-				for i in list_tmp:
-					try:
-						display(2, 0, '| Level : %d/%d |  Current folder : %s (%d/%d)' % (cur_lvl, options.level, i[0][4:], list_tmp.index(i)+1, len(list_tmp)))
+				if cur_lvl == 1:
+					tree = recursivity(options, tree, '', 1) 
+					displayTree(tree, 4)
 
-						n_tree = list()
-						# files
-						getElements(options, options.filenames, '/%s/'%i[0][4:], queue)
-						while queue.qsize() > 0:
-							cur = queue.get()
-							n_tree.append(('f%d'%cur[0], cur[1]))
-						# directories
-						getElements(options, options.directories, '/%s/'%i[0][4:], queue)
-						while queue.qsize() > 0:
-							cur = queue.get()
-							n_tree.append(('d%d%s'%(cur[0],cur[1]), list()))
+				if cur_lvl == 2:
+					for i in tree:
+						if i[0][0] == 'd':
+							index = tree.index(i)
+							root = '/%s'%i[0][4:]
+							new_list = recursivity(options, i[1], root, 2)
+							tree[index] = (i[0], new_list)
+							displayTree(tree, 4)
 
-						display(2, 0, '                                                                          ')
-						n_tree = removeDouble(n_tree)
-						tree[tree.index(i)] = (i[0], n_tree)
-						displayTree(tree, 4)
-					except curses.error:
-						# sometimes... but anyway (maybe out of screen)
-						continue
+				if cur_lvl == 3:
+					for i in tree:
+						if i[0][0] == 'd':
+							index = tree.index(i)
+							root = '/%s'%i[0][4:]
+							for v in i[1]:
+								if v[0][0] == 'd':
+									index2 = i[1].index(v)
+									root  = '%s/%s' % (root, v[0][4:])
+									new_list = recursivity(options, v[1], root, 3)
+									i[1][index2] = (v[0], new_list)
+							tree[index] = (i[0], i[1])
+							displayTree(tree, 4)
 				cur_lvl+=1
 	except Exception as e:
 		print 'Error: %s' % e
