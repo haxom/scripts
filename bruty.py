@@ -3,7 +3,7 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "bruty.py"
-__version__	= "1.0b"
+__version__	= "1.0c"
 
 ## ToDo
 #
@@ -35,9 +35,8 @@ def getParams():
 	parser.add_option('-d', '--directories', dest='directories', default='',  help='PATH to directories wordlist')
 	parser.add_option('-u', '--url', dest='url', default='http://localhost', help='based URL (without FILEX text)')
 	parser.add_option('-H', '--headers', dest='headers', default='', help='custom the headers (name:value;name:value...)')
-	parser.add_option('-l', '--log', dest='log', default=False, action='store_true', help='log the requests/responses')
 	parser.add_option('-x', '--exclude', dest='exclude', default='404', help='exclude return code, separated by a coma')
-	parser.add_option('', '--level', dest='level', default=-1, help='subdirectories max. level (0 to 3)')
+	parser.add_option('', '--level', dest='level', default=0, help='subdirectories max. level (0 to 3)')
 	parser.add_option('-m', '--method', dest='method', default='GET', help='HTTP method (default: GET)')
 	parser.add_option('-n', '--thread', dest='threads', default=1, help='Nbre of threads')
 	(options, args) = parser.parse_args(sys.argv)
@@ -116,15 +115,17 @@ def recursion(options, tree, root, cur_lvl=0):
 			display(2, 0, '| Level : %d/%d |  Current folder : %s/%s/ (%d/%d)' % (cur_lvl, options.level, root, i[0][4:], list_tmp.index(i)+1, len(list_tmp)))
 			n_tree = list()
 			# files
-			getElements(options, options.filenames, '%s/%s/'%(root, i[0][4:]), queue)
-			while queue.qsize() > 0:
-				cur = queue.get()
-				n_tree.append(('f%d'%cur[0], cur[1]))
+			if options.filenames != '':
+				getElements(options, options.filenames, '%s/%s/'%(root, i[0][4:]), queue)
+				while queue.qsize() > 0:
+					cur = queue.get()
+					n_tree.append(('f%d'%cur[0], cur[1]))
 			# directories
-			getElements(options, options.directories, '%s/%s/'%(root, i[0][4:]), queue)
-			while queue.qsize() > 0:
-				cur = queue.get()
-				n_tree.append(('d%d%s'%(cur[0],cur[1]), list()))
+			if options.directories != '':
+				getElements(options, options.directories, '%s/%s/'%(root, i[0][4:]), queue)
+				while queue.qsize() > 0:
+					cur = queue.get()
+					n_tree.append(('d%d%s'%(cur[0],cur[1]), list()))
 			display(2, 0, '                                                                          ')
 			n_tree = removeDouble(n_tree)
 			tree[tree.index(i)] = (i[0], n_tree)
@@ -138,6 +139,8 @@ def recursion(options, tree, root, cur_lvl=0):
 if __name__ == '__main__':
 	options = getParams()
 	options.level = int(options.level)
+	if options.level not in (0, 1, 2, 3):
+		options.level = 0
 	options.threads = int(options.threads)
 	if options.threads < 1:
 		options.threads = 1
@@ -173,15 +176,17 @@ if __name__ == '__main__':
 
 		## root research
 		# files
-		getElements(options, options.filenames, '/', queue)
-		while queue.qsize() > 0:
-			cur = queue.get()
-			tree.append(('f%d'%cur[0], cur[1]))
+		if options.filenames != '':
+			getElements(options, options.filenames, '/', queue)
+			while queue.qsize() > 0:
+				cur = queue.get()
+				tree.append(('f%d'%cur[0], cur[1]))
 		# directories
-		getElements(options, options.directories, '/', queue)
-		while queue.qsize() > 0:
-			cur = queue.get()
-			tree.append(('d%d%s'%(cur[0],cur[1]), list()))
+		if options.directories != '':
+			getElements(options, options.directories, '/', queue)
+			while queue.qsize() > 0:
+				cur = queue.get()
+				tree.append(('d%d%s'%(cur[0],cur[1]), list()))
 
 		display(2, 0, '                                                                          ')
 		tree = removeDouble(tree)
@@ -189,7 +194,7 @@ if __name__ == '__main__':
 
 		## recursive research
 		cur_lvl = 1
-		while cur_lvl <= options.level or options.level < 0:
+		while options.level != 0 and cur_lvl <= options.level:
 				if cur_lvl == 1:
 					tree = recursion(options, tree, '', 1) 
 					displayTree(tree, 4)
@@ -217,5 +222,7 @@ if __name__ == '__main__':
 							tree[index] = (i[0], i[1])
 							displayTree(tree, 4)
 				cur_lvl+=1
+	except KeyboardInterrupt:
+		display(4, 0, '*** Bye Bye ***')
 	except Exception as e:
-		print 'Error: %s' % e
+		display(4, 0, 'Error: %s'%e)
