@@ -3,7 +3,7 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "pwnSQL.py"
-__version__	= "1.2"
+__version__	= "1.3"
 
 ## Imports ##
 from optparse import OptionParser
@@ -23,11 +23,12 @@ def getChar(char):
 	return result
 
 def getContent(payload):
+        payload = options.prefix + payload + options.suffix
 	payload = quote(payload)
 	http = httplib2.Http()
 	content = ''
 	url = options.url.replace('PAYLOAD', payload)
-	#print url
+	print url
 	if options.body:
 		body = options.body.replace('PAYLOAD', body)
 	if options.method == "GET":
@@ -163,7 +164,7 @@ def shellHelp():
 	print "--- Functions available ---"
 	print "> databases"
 	print "> tables from [db]"
-	print "> columns from [db] [tables]"
+	print "> columns from [db] [tables]"
 	print "> dump from [db] [tables] [col1] [col2] [...]"
 	print "> get [remote-file] [(optionnal) local-file]"
 	print "> [SQL command] (no multi-threading)"
@@ -334,7 +335,7 @@ def shell(init=0):
 			shellHelp()
 
 		# quit
-		elif str(choix[0]) == "quit":
+		elif str(choix[0]) == "quit" or str(choix[0]) == "exit":
 			return
 
 		# others
@@ -352,6 +353,8 @@ def getParams(print_params=False):
 	parser.add_option('', '--method', dest='method', help='HTTP method (GET/POST)', default='GET')
 	parser.add_option('', '--user-agent', dest='user_agent', default='Mozilla/5.0 (X11; U; Linux i686; fr; rv:1.9.1.1) Gecko/20090715 Firefox/3.5.1', help='Custom user-agent')
 	parser.add_option('', '--cookie', dest='cookie', default='', help='Custom cookies')
+	parser.add_option('', '--suffix', dest='suffix', default='', help='Add suffix string')
+	parser.add_option('', '--prefix', dest='prefix', default='', help='Add prefix string')
 	parser.add_option('', '--detection-type', dest='detection', help='1: valid pattern / 2: error pattern', default=1)
 	parser.add_option('', '--pattern', dest='pattern', default='1', help='Pattern to test')
 	parser.add_option('', '--threads', dest='threads', default=10, help='Number of threads')
@@ -379,7 +382,7 @@ def getParams(print_params=False):
 	if not options.threads or options.threads < 1:
 		print "/!\\ Option --threads should be an integer >= 1 /!\\"
 		sys.exit()
-	if not options.char or (options.char != 1 and options.char != 2 and options.char != 3 and options.char != 4 and options.char != 5 and options.char != 6):
+	if not options.char or (options.char < 1 or options.char > 6):
 		print "/!\\ Option --char-method is invalid /!\\"
 		sys.exit()
 	if not options.decimal or (options.decimal != 1 and options.decimal != 2):
@@ -415,3 +418,4 @@ if __name__ == '__main__':
 
 	print "] OK... anyway if tests are good or not, starting the shell..."
 	shell(1)
+
