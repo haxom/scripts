@@ -1,4 +1,21 @@
-================================================================================
+==============================================================================
+wep_auth_attack
+===============
+
+WEP authentication key attack (PSK mode).
+This script requires only the response message of the 3-way handshake (containing the IV and the response of the challenge encrypted with RC4). It tries to decrypt the response challenge using the candidate key in order to find a valid response header in clear-text :
+0x01 : Shared key authentication algorithm
+0x0003 : Sequence number (3 = response)
+0x0000: Status successful
+
+IV and response challenge could be extracted with Wireshark or whatever.
+
+$ python wep_auth_attack.py --response bca06838492b3d625bdda58c6441f666c597eb90d72a6814ca009d553c9ebc24d643f19139257cbe8f71b91f5c8ee39d3d3c090096c524a339c05853ba69ef58c1ee2246eafdcdb99bd1c2f31687a9c3aec99a36a3bb68d843576ceb5a8d2ba5702c4bd38d8704243135d4a19725f45b1167fbf0b467bd805e30de4451377c3193405872e5a9ee04 --iv ae39d6 --wordlist dico.txt
+Wordlist attack...
+Key found: unb09
+
+
+==============================================================================
 bruty
 =====
 
