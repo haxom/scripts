@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # 40-bit WEP key / brute-force printable chars
     else:
         print 'Brute-force attack...'
-	for w in fb_generator(length=5, maxlength=5, charset=string.ascii_lowercase+string.digits):
+	for w in fb_generator(length=5, maxlength=5, charset=string.ascii_lowercase+string.ascii_uppercase+string.digits):
         	if testCandidate(iv, w, response):
             		print 'Key found: %s' % w
 	            	break
