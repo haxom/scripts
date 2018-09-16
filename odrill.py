@@ -13,6 +13,7 @@ __version__	= "0.1"
 # add data from parquet
 # ordering by domaine ? 
 # indicated first and times that email has been seen ?
+# add web interface
 #
 ## End of ToDo
 
