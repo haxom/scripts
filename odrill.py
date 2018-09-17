@@ -65,7 +65,7 @@ def output(message):
 
 def search_email(email):
     debug('Searching email : %s'%email)
-    request = 'SELECT * FROM dfs.`%s/*.json` WHERE LOWER(email) LIKE LOWER(\'%%%s%%\')' % (data_folder, email)
+    request = 'SELECT * FROM dfs.`%s/*.json` WHERE LOWER(email) LIKE LOWER(\'%%%s%%\') ORDER BY `rm` ASC' % (data_folder, email)
     debug(request)
     resp = send_request(request)
     return resp
