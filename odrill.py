@@ -14,6 +14,7 @@ __version__	= "0.1"
 # ordering by domaine ? 
 # indicated first and times that email has been seen ?
 # add web interface
+# manage following information : date / RM / password
 #
 ## End of ToDo
 
@@ -100,8 +101,8 @@ if __name__ == '__main__':
             console()
             sys.exit()
 
-        # global results_count variable for email and file options
-        results_count = dict()
+        # global results_output variable for email and file options
+        results_output = dict()
 
         if options.email != '':
             debug('processing "email" option')
@@ -109,9 +110,11 @@ if __name__ == '__main__':
             results = results['rows']
             if results[0] == {}:
                 # no result
-                results_count[options.email] = 0
+                results_output[options.email] = {'count':0, 0:{'rm':'', 'date':'', 'pass':''}}
             else:
-                results_count[options.email] = len(results)
+                results_output[options.email] = {'count':len(results)}
+                for i in range(len(results)):
+                    results_output[options.email][i] = {'rm':'#RM55XXX', 'date':'10/09/2018', 'pass':'Passw0rd'}
 
 
         if options.file != '':
@@ -126,11 +129,16 @@ if __name__ == '__main__':
                     results = results['rows']
                     if results[0] == {}:
                         # no result
-                        results_count[line] = 0
+                        results_output[line] = {'count':0, 0:{'rm':'', 'date':'', 'pass':''}}
                     else:
-                        results_count[line] = len(results)
+                        results_output[line] = {'count':len(results)}
+                        for i in range(len(results)):
+                            results_output[line][i] = {'rm':'#RM55XXX', 'date':'10/09/2018', 'pass':'Passw0rd'}
 
         # print results
-        results_count = sorted(results_count.items(), key=operator.itemgetter(1))
-        results_count.reverse()
-        print results_count
+        results_output = sorted(results_output.items(), key=operator.itemgetter(1))
+        results_output.reverse()
+        for r in results_output:
+            print '* %s' % r[0]
+            for i in range(r[1]['count']):
+                print '  - %s (%s)'%(r[1][i]['rm'], r[1][i]['date'])
