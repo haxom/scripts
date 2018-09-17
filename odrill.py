@@ -3,7 +3,7 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "odrill.py"
-__version__	= "0.1"
+__version__	= "0.2"
 
 ## ToDo
 #
@@ -102,7 +102,7 @@ if __name__ == '__main__':
             console()
             sys.exit()
 
-        # global results_output variable for email and file options
+        # results_output will store all results
         results_output = dict()
 
         if options.email != '':
@@ -115,8 +115,7 @@ if __name__ == '__main__':
             else:
                 results_output[options.email] = {'count':len(results)}
                 for i in range(len(results)):
-                    results_output[options.email][i] = {'rm':'#RM55XXX', 'date':'10/09/2018', 'pass':'Passw0rd'}
-
+                    results_output[options.email][i] = {'rm':results[i]['rm'], 'date':results[i]['date'], 'pass':results[i]['password']}
 
         if options.file != '':
             debug('processing "file" option')
@@ -134,7 +133,7 @@ if __name__ == '__main__':
                     else:
                         results_output[line] = {'count':len(results)}
                         for i in range(len(results)):
-                            results_output[line][i] = {'rm':'#RM55XXX', 'date':'10/09/2018', 'pass':'Passw0rd'}
+                            results_output[line][i] = {'rm':results[i]['rm'], 'date':results[i]['date'], 'pass':results[i]['password']}
 
         # print results
         results_output = sorted(results_output.items(), key=operator.itemgetter(1))
@@ -142,4 +141,7 @@ if __name__ == '__main__':
         for r in results_output:
             print '* %s' % r[0]
             for i in range(r[1]['count']):
-                print '  - %s (%s)'%(r[1][i]['rm'], r[1][i]['date'])
+                if options.password:
+                    print '  - %s (%s) : %s'%(r[1][i]['rm'], r[1][i]['date'], r[1][i]['pass'])
+                else:
+                    print '  - %s (%s)'%(r[1][i]['rm'], r[1][i]['date'])
