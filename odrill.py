@@ -47,6 +47,7 @@ def get_params():
         parser.add_option('-v', '--verbose', dest='debug', default=False, action='store_true', help='Debug mode')
         parser.add_option('', '--host', dest='host', default='127.0.0.1:8047', help='Host address and port')
         parser.add_option('-o', '--output', dest='output', default='', help='file to store results')
+        parser.add_option('-p', '--password', dest='password', default=False, action='store_true', help='Enable password processing')
 
 	(options, args) = parser.parse_args(sys.argv)
 	return options
