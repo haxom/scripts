@@ -3,18 +3,16 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "odrill.py"
-__version__	= "0.2"
+__version__	= "0.3"
 
 ## ToDo
 #
-# dashboard showing daily/monthly stats ?
 # console mode
-# add data from json (=> conversion to parquet)
-# add data from parquet
-# ordering by domaine ? 
 # indicated first and times that email has been seen ?
-# add web interface
-# manage following information : date / RM / password
+# web interface
+## add data from json
+## add data from parquet
+## dashboard / stats
 #
 ## End of ToDo
 
@@ -22,6 +20,7 @@ __version__	= "0.2"
 #
 # search match count for email
 # search matches from a file (one email per line)
+# manage following information : date / RM / password
 #
 ## End of Done list
 
@@ -33,6 +32,8 @@ import httplib2
 import urllib
 import json
 import operator
+import SocketServer
+import SimpleHTTPServer
 
 headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0'}
 data_folder = '/tmp/'
@@ -48,6 +49,7 @@ def get_params():
         parser.add_option('', '--host', dest='host', default='127.0.0.1:8047', help='Host address and port')
         parser.add_option('-o', '--output', dest='output', default='', help='file to store results')
         parser.add_option('-p', '--password', dest='password', default=False, action='store_true', help='Enable password processing')
+        parser.add_option('-w', '--web', dest='web', default=False, action='store_true', help='Launch web service')
 
 	(options, args) = parser.parse_args(sys.argv)
 	return options
@@ -65,7 +67,7 @@ def output(message):
 
 def search_email(email):
     debug('Searching email : %s'%email)
-    request = 'SELECT * FROM dfs.`%s/*.json` WHERE LOWER(email) LIKE LOWER(\'%%%s%%\') ORDER BY `rm` ASC' % (data_folder, email)
+    request = 'SELECT * FROM dfs.`%s/*.parquet` WHERE LOWER(Mail) LIKE LOWER(\'%%%s%%\') ORDER BY `RM` ASC' % (data_folder, email)
     debug(request)
     resp = send_request(request)
     return resp
@@ -84,6 +86,12 @@ def send_request(request):
 def console():
     print '## ToDo : console ##'
 
+def webserver():
+    handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+    httpd = SocketServer.TCPServer(('127.0.0.1', 8888), handler)
+    print 'Web server launched. Listenning on 127.0.0.1:8888'
+    httpd.serve_forever()
+
 
 ## Main ##
 if __name__ == '__main__':
@@ -96,6 +104,11 @@ if __name__ == '__main__':
             except:
                 print 'Error during opening the output file (%s)' % options.output
                 sys.exit()
+
+        if options.web:
+            debug('launching web server...')
+            webserver()
+            sys.exit()
 
         if options.console:
             debug('enabling console')
@@ -111,11 +124,11 @@ if __name__ == '__main__':
             results = results['rows']
             if results[0] == {}:
                 # no result
-                results_output[options.email] = {'count':0, 0:{'rm':'', 'date':'', 'pass':''}}
+                results_output[options.email] = {'count':0, 0:{'rm':'', 'date':'', 'pass':'', 'entite':''}}
             else:
                 results_output[options.email] = {'count':len(results)}
                 for i in range(len(results)):
-                    results_output[options.email][i] = {'rm':results[i]['rm'], 'date':results[i]['date'], 'pass':results[i]['password']}
+                    results_output[options.email][i] = {'rm':results[i]['RM'], 'date':results[i]['Date'], 'entite':results[i]['Entite'], 'pass':results[i]['Password']}
 
         if options.file != '':
             debug('processing "file" option')
@@ -133,7 +146,7 @@ if __name__ == '__main__':
                     else:
                         results_output[line] = {'count':len(results)}
                         for i in range(len(results)):
-                            results_output[line][i] = {'rm':results[i]['rm'], 'date':results[i]['date'], 'pass':results[i]['password']}
+                            results_output[line][i] = {'rm':results[i]['RM'], 'date':results[i]['Date'], 'entite':results[i]['Entite'], 'pass':results[i]['Password']}
 
         # print results
         results_output = sorted(results_output.items(), key=operator.itemgetter(1))
@@ -142,6 +155,7 @@ if __name__ == '__main__':
             print '* %s' % r[0]
             for i in range(r[1]['count']):
                 if options.password:
-                    print '  - %s (%s) : %s'%(r[1][i]['rm'], r[1][i]['date'], r[1][i]['pass'])
+                    print '  - RM%s (%s / %s) : %s'%(r[1][i]['rm'], r[1][i]['date'], r[1][i]['entite'], r[1][i]['pass'])
                 else:
-                    print '  - %s (%s)'%(r[1][i]['rm'], r[1][i]['date'])
+                    print '  - RM%s (%s / %s)'%(r[1][i]['rm'], r[1][i]['entite'], r[1][i]['date'])
+
