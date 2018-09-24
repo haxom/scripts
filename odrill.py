@@ -3,7 +3,7 @@
 __author__	= "haxom"
 __email__	= "haxom@haxom.net"
 __file__	= "odrill.py"
-__version__	= "0.3"
+__version__	= "0.4"
 
 ## ToDo
 #
@@ -27,12 +27,10 @@ __version__	= "0.3"
 ## Imports ##
 from optparse import OptionParser
 import sys
-import curses
 import httplib2
 import urllib
 import json
 import operator
-import binascii
 
 # web interface
 import BaseHTTPServer
@@ -78,9 +76,9 @@ def search_one(email):
     results = results['rows']
     if results[0] == {}:
         # no result
-        results_output[email] = {'count':0, 0:{'rm':'', 'date':'', 'pass':'', 'entite':''}}
+        results_output[email] = {'count':0, 0:{'rm':'', 'date':'', 'pass':'', 'entite':''} }
     else:
-        results_output[email] = {'count':len(results)}
+        results_output[email] = {'count':len(results) }
         for i in range(len(results)):
             results_output[email][i] = {'rm':results[i]['RM'], 'date':results[i]['Date'], 'entite':results[i]['Entite'], 'pass':results[i]['Password']}
     return results_output
@@ -94,7 +92,7 @@ def search_file(f):
             results = results['rows']
             if results[0] == {}:
                 # no result
-                results_output[line] = {'count':0, 0:{'rm':'', 'date':'', 'pass':''}}
+                results_output[line] = {'count':0, 0:{'rm':'', 'date':'', 'pass':''} }
             else:
                 results_output[line] = {'count':len(results)}
                 for i in range(len(results)):
@@ -103,7 +101,7 @@ def search_file(f):
 
 def search_email(email):
     debug('Searching email : %s'%email)
-    request = 'SELECT * FROM dfs.`%s/*.json` WHERE LOWER(Mail) LIKE LOWER(\'%%%s%%\') ORDER BY `RM` ASC' % (data_folder, email)
+    request = 'SELECT * FROM dfs.`%s/*.parquet` WHERE LOWER(Mail) LIKE LOWER(\'%%%s%%\') ORDER BY `RM` ASC' % (data_folder, email)
     debug(request)
     resp = send_request(request)
     return resp
@@ -139,34 +137,37 @@ class WebServer(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def html_headers(self):
         self.wfile.write('<html>\n<head>\n')
-        self.wfile.write('<style>\n')
-        self.wfile.write('body {margin: 10; font-family: "Merriweather", sans-serif; font-size: 1rem; font-weight: 400; line-height: 1.9; color: #999; text-align: left; background-color: #fff;}\n')
-        self.wfile.write('hr {box-sizing:  content-box; height: 0; overflow: visible;}')
-        self.wfile.write('h1, h2, h3, h4, h5, h6 {margin-top: 0; margin-bottom: 1rem; color: #333}')
-        self.wfile.write('p {margin-top: 0; margin-bottom: 1rem;}')
-        self.wfile.write('hr {box-sizing: content-box; height: 0; overflow: visible;}')
-        self.wfile.write('img {vertical-align: middle; border-style: none;}')
-        self.wfile.write('table {border-collapse: collapse;}')
-        self.wfile.write('label {display: inline-block; margin-bottom: .5rem;}')
-        self.wfile.write('button {border-radius: 0;}')
-        self.wfile.write('button:focus {outline: 1px dotted; outline: 5px auto -webkit-focus-ring-color;}')
-        self.wfile.write('input, button, select, optgroup, textarea {margin: 0; font-family: inherit; font-size: inherit; line-height: inherit;}')
-        self.wfile.write('button, input {overflow: visible;}')
-        self.wfile.write('textarea {overflow: auto; resize: vertical;}')
-        self.wfile.write('code {padding: 0.2rem 0.4rem; font-size: 90%; color: #bd4147; background-color: #f8f9fa; border-radius: 0px;}')
-        self.wfile.write('.navbar-text {display: inline-block; padding-top: 0.5rem; padding-bottom: 0.5rem;}')
-        self.wfile.write('.navbar-collapse {flex-basis: 100%; flex-grow: 1; align-items: center;}')
-        self.wfile.write('.navbar-light, .navbar-nav, .navbar-link, .dropdown-item {color: #fff; background-color: #acacac; font-weight: bold;  padding: 1rem 2rem !important; font-size: 0.9rem;}')
-        self.wfile.write('.btn {display: inline-block; font-weight: 400; text-align: center; white-space: nowrap; vertical-align: middle; user-select: none; border: 1px solid transparent; padding: 0.375rem 0.75rem; font-size: 1rem; line-height: 1.9; border-radius: 0px; transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }')
-        self.wfile.write('.btn-primary {color: #fff; background-color: #333; border-color: #333;}')
-        self.wfile.write('.btn-primary:hover {color: #fff; background-color: #202020; border-color: #1a1a1a;}')
-        self.wfile.write('.btn-primary:focus {box-shadow: 0 0 0 0.2rem rgba(51, 51, 51, 0.5);}')
-        self.wfile.write('.btn-primary:disabled {background-color: #333; border-color: #333;}')
-        self.wfile.write('.btn-primary:not {color: #fff; background-color: #1a1a1a; border-color: #131313; box-shadow: 0 0 0 0.2rem rgba(51, 51, 51, 0.5);}')
-        self.wfile.write('.footer-lists {background-color: #ebebeb; padding: 2rem; margin-bottom: 1rem; border-top: 1px solid #d2d2d2; font-size: 0.8rem}')
-        self.wfile.write('.footer-lists h4 {color #999999}')
-        self.wfile.write('hr {box-sizing: content-box; height: 0; overflow: visible;}')
-        self.wfile.write('</style>\n')
+        css_html = """
+<style>
+body {margin: 10; font-family: "Merriweather", sans-serif; font-size: 1rem; font-weight: 400; line-height: 1.9; color: #999; text-align: left; background-color: #fff;}
+hr {box-sizing:  content-box; height: 0; overflow: visible;}
+h1, h2, h3, h4, h5, h6 {margin-top: 0; margin-bottom: 1rem; color: #333}
+p {margin-top: 0; margin-bottom: 1rem;}
+hr {box-sizing: content-box; height: 0; overflow: visible;}
+img {vertical-align: middle; border-style: none;}
+table {border-collapse: collapse;}
+label {display: inline-block; margin-bottom: .5rem;}
+button {border-radius: 0;}
+button:focus {outline: 1px dotted; outline: 5px auto -webkit-focus-ring-color;}
+input, button, select, optgroup, textarea {margin: 0; font-family: inherit; font-size: inherit; line-height: inherit;}
+button, input {overflow: visible;}
+textarea {overflow: auto; resize: vertical;}
+code {padding: 0.2rem 0.4rem; font-size: 90%; color: #bd4147; background-color: #f8f9fa; border-radius: 0px;}
+.navbar-text {display: inline-block; padding-top: 0.5rem; padding-bottom: 0.5rem;}
+.navbar-collapse {flex-basis: 100%; flex-grow: 1; align-items: center;}
+.navbar-light, .navbar-nav, .navbar-link, .dropdown-item {color: #fff; background-color: #acacac; font-weight: bold;  padding: 1rem 2rem !important; font-size: 0.9rem;}
+.btn {display: inline-block; font-weight: 400; text-align: center; white-space: nowrap; vertical-align: middle; user-select: none; border: 1px solid transparent; padding: 0.375rem 0.75rem; font-size: 1rem; line-height: 1.9; border-radius: 0px; transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }
+.btn-primary {color: #fff; background-color: #333; border-color: #333;}
+.btn-primary:hover {color: #fff; background-color: #202020; border-color: #1a1a1a;}
+.btn-primary:focus {box-shadow: 0 0 0 0.2rem rgba(51, 51, 51, 0.5);}
+.btn-primary:disabled {background-color: #333; border-color: #333;}
+.btn-primary:not {color: #fff; background-color: #1a1a1a; border-color: #131313; box-shadow: 0 0 0 0.2rem rgba(51, 51, 51, 0.5);}
+.footer-lists {background-color: #ebebeb; padding: 2rem; margin-bottom: 1rem; border-top: 1px solid #d2d2d2; font-size: 0.8rem}
+.footer-lists h4 {color #999999}
+hr {box-sizing: content-box; height: 0; overflow: visible;}
+</style>
+        """
+        self.wfile.write(css_html)
         self.wfile.write('</head>\n<body>\n')
 
 
@@ -188,14 +189,18 @@ class WebServer(BaseHTTPServer.BaseHTTPRequestHandler):
         self.wfile.write('<center><h1>ODRILL v%s</h1></center>\n'%__version__)
 
         # top bar
-        self.wfile.write('<div class="collapse navbar-collapse"><ul class="navbar-nav mr-auto">\n<center>')
-        self.wfile.write('<form method="get" action="odrill.py" style="display: inline;">\n')
-        self.wfile.write('<input size="25" placeholder="bla@bla.com" type="text" name="search_term"> ')
-        self.wfile.write('<button class="btn btn-primary" type="submit">recherche</button></form>\n | \n')
-        self.wfile.write('<form enctype="multipart/form-data" method="post" action="odrill.py" style="display: inline;">\n')
-        self.wfile.write('<input size="10" type="file" name="search_term_file"> ')
-        self.wfile.write('<button class="btn btn-primary" type="submit">envoi et recherche</button></form>\n')
-        self.wfile.write('</center></ul></div>')
+        topbar_html = """
+<div class="collapse navbar-collapse"><ul class="navbar-nav mr-auto">
+<center>
+<form method="get" action="odrill.py" style="display: inline;">
+<input size="25" placeholder="bla@bla.com" type="text" name="search_term"> 
+<button class="btn btn-primary" type="submit">recherche</button></form> | 
+<form enctype="multipart/form-data" method="post" action="odrill.py" style="display: inline;">
+<input size="5" type="file" name="search_term_file">
+<button class="btn btn-primary" type="submit">envoi et recherche</button></form>
+</center></ul></div>
+        """
+        self.wfile.write(topbar_html)
 
         # results
         self.wfile.write('<div class="footer-lists">\n')
@@ -212,13 +217,14 @@ class WebServer(BaseHTTPServer.BaseHTTPRequestHandler):
                 results = sorted(results.items(), key=operator.itemgetter(1))
                 results.reverse()
                 for r in results:
+                    self.wfile.write('[%s]<br />\n' % r[0])
                     if r[1]['count'] == 0:
                         self.wfile.write('<b><i>Aucun résultat</i></b><br />\n')
                     for i in range(r[1]['count']):
                         if options.password:
-                            self.wfile.write('  - RM%s (%s / %s) : %s<br />\n'%(r[1][i]['rm'], r[1][i]['date'], r[1][i]['entite'], r[1][i]['pass']))
+                            self.wfile.write('RM%s (%s / %s) : %s<br />\n'%(r[1][i]['rm'], r[1][i]['date'], r[1][i]['entite'], r[1][i]['pass']))
                         else:
-                            self.wfile.write('  - RM%s (%s / %s)<br />\n'%(r[1][i]['rm'], r[1][i]['entite'], r[1][i]['date']))
+                            self.wfile.write('RM%s (%s / %s)<br />\n'%(r[1][i]['rm'], r[1][i]['entite'], r[1][i]['date']))
 
         # file-terms
         if self.is_post:
@@ -247,14 +253,14 @@ class WebServer(BaseHTTPServer.BaseHTTPRequestHandler):
             results = sorted(results.items(), key=operator.itemgetter(1))
             results.reverse()
             for r in results:
-                self.wfile.write('* %s<br />\n' % r[0])
+                self.wfile.write('[%s]<br />\n' % r[0])
                 if r[1]['count'] == 0:
                     self.wfile.write('<b><i>Aucun résultat</i></b><br />\n')
                 for i in range(r[1]['count']):
                     if options.password:
-                        self.wfile.write('  - RM%s (%s / %s) : %s<br />\n'%(r[1][i]['rm'], r[1][i]['date'], r[1][i]['entite'], r[1][i]['pass']))
+                        self.wfile.write('RM%s (%s / %s) : %s<br />\n'%(r[1][i]['rm'], r[1][i]['date'], r[1][i]['entite'], r[1][i]['pass']))
                     else:
-                        self.wfile.write('  - RM%s (%s / %s)<br />\n'%(r[1][i]['rm'], r[1][i]['entite'], r[1][i]['date']))
+                        self.wfile.write('RM%s (%s / %s)<br />\n'%(r[1][i]['rm'], r[1][i]['entite'], r[1][i]['date']))
 
         self.wfile.write('<hr>')
         self.wfile.write('</div>')
